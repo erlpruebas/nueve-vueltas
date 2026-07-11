@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#fff7ea" />
+    <title>Nueve vueltas</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main id="app" class="app-shell">
+      <section id="setup" class="setup screen active" aria-labelledby="setup-title">
+        <div class="brand-mark" aria-hidden="true">9×</div>
+        <p class="eyebrow">Memoriza sin darte cuenta</p>
+        <h1 id="setup-title">Nueve vueltas</h1>
+        <p class="intro">Pega un texto. Lo iremos borrando poco a poco hasta que solo quede en tu cabeza.</p>
+        <label for="source-text">Texto a aprender</label>
+        <div class="editor-row">
+          <div class="highlight-wrap">
+            <div id="highlight-backdrop" class="highlight-backdrop" aria-hidden="true"></div>
+            <textarea id="source-text" rows="9" placeholder="Ejemplo: La memoria se entrena cada día. Un pequeño esfuerzo repetido llega muy lejos."></textarea>
+          </div>
+          <div class="split-tools">
+            <button id="split-mode-btn" class="button secondary small">Dividir partes ✂</button>
+            <div id="split-controls" class="split-controls" hidden>
+              <button id="mark-start-btn" class="button secondary small">Marcar inicio</button>
+              <button id="mark-end-btn" class="button secondary small" disabled>Marcar final</button>
+              <button id="split-part-btn" class="button primary small" hidden>Dividir parte</button>
+              <p id="split-hint" class="split-hint"></p>
+            </div>
+          </div>
+        </div>
+        <div id="parts-panel" class="parts-panel" hidden>
+          <div class="panel-head">
+            <span class="panel-title">Partes</span>
+            <button id="clear-parts-btn" class="link-button">Borrar todas</button>
+          </div>
+          <ol id="parts-list" class="parts-list"></ol>
+        </div>
+        <div class="setup-footer">
+          <span id="text-hint">Mínimo una frase</span>
+          <button id="start-btn" class="button primary">Empezar <span aria-hidden="true">→</span></button>
+        </div>
+        <div id="history-panel" class="history-panel" hidden>
+          <div class="panel-head">
+            <span class="panel-title">Histórico</span>
+            <button id="clear-history-btn" class="link-button">Vaciar</button>
+          </div>
+          <ul id="history-list" class="history-list"></ul>
+        </div>
+      </section>
+
+      <section id="game" class="game screen" aria-live="polite">
+        <header class="topbar">
+          <button id="exit-btn" class="icon-button" aria-label="Volver al inicio">←</button>
+          <div class="mini-brand">9× <span>Nueve vueltas</span></div>
+          <div class="topbar-actions">
+            <button id="font-minus-btn" class="icon-button" aria-label="Letra más pequeña">A−</button>
+            <button id="font-plus-btn" class="icon-button" aria-label="Letra más grande">A+</button>
+            <button id="sound-btn" class="icon-button" aria-label="Desactivar sonido">♪</button>
+          </div>
+        </header>
+
+        <nav id="level-nav" class="level-nav" aria-label="Niveles"></nav>
+
+        <div class="stage-heading">
+          <div>
+            <p id="stage-kicker" class="eyebrow"></p>
+            <h2 id="stage-title"></h2>
+          </div>
+          <span id="stage-count" class="stage-count"></span>
+        </div>
+
+        <article id="text-card" class="text-card"></article>
+
+        <div id="reading-controls" class="controls reading-controls">
+          <div class="read-meter" aria-label="Progreso de lecturas">
+            <div id="read-dots" class="read-dots"></div>
+            <span id="read-label">0 / 9</span>
+          </div>
+          <button id="read-btn" class="button primary wide">Leído <span aria-hidden="true">✓</span></button>
+        </div>
+
+        <div id="reveal-controls" class="controls reveal-controls">
+          <button id="hide-btn" class="button secondary">← Ocultar</button>
+          <button id="show-btn" class="button primary">Mostrar →</button>
+        </div>
+      </section>
+
+      <section id="finish" class="finish screen" aria-labelledby="finish-title">
+        <div class="finish-burst" aria-hidden="true">✦</div>
+        <p class="eyebrow">Misión cumplida</p>
+        <h2 id="finish-title">Ya es tuyo.</h2>
+        <p id="finish-text">Has leído, reconstruido y recordado el texto completo.</p>
+        <div class="finish-actions">
+          <button id="next-part-btn" class="button primary" hidden>Siguiente parte →</button>
+          <button id="again-btn" class="button secondary">Repetir texto</button>
+          <button id="new-btn" class="button primary">Nuevo texto</button>
+        </div>
+      </section>
+    </main>
+
+    <div id="toast" class="toast" role="status"></div>
+    <script src="app.js"></script>
+  </body>
+</html>
