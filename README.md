@@ -22,7 +22,10 @@ En cada nivel vas mostrando las frases una a una para comprobar si las recuerdas
 - **Histórico**: guarda automáticamente los textos que has practicado (en tu propio
   navegador, con `localStorage`; no se envía nada a ningún servidor).
 - **Dividir en partes**: para textos largos, marca inicio y final de cada trozo y
-  practícalos por separado, uno tras otro. Cada parte se resalta con un color.
+  practícalos por separado, uno tras otro. Al terminar una parte aparece una lista
+  para saltar directamente a cualquiera de ellas. Cada parte se resalta con un color.
+- **Listas y texto pegado**: reconoce los saltos de línea, los números y las viñetas
+  de textos copiados para mantener cada punto como una frase independiente.
 - **Tamaño de letra ajustable** con los botones `A−` / `A+`.
 - **Controles flotantes** para que el texto largo siga siendo legible al desplazarte.
 

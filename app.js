@@ -40,14 +40,49 @@ const els = {
   historyPanel: $("#history-panel"), historyList: $("#history-list"), clearHistory: $("#clear-history-btn"),
   nextPart: $("#next-part-btn"), finishTitle: $("#finish-title"), finishText: $("#finish-text"),
   backdrop: $("#highlight-backdrop"), fontMinus: $("#font-minus-btn"), fontPlus: $("#font-plus-btn"),
+  finishParts: $("#finish-parts"), finishPartsList: $("#finish-parts-list"),
 };
 
 const PART_COLORS = 5;
 
+const LIST_ITEM_PREFIX = /^(?:\(?\d{1,3}(?:[.)])?|[A-Za-zÁÉÍÓÚÜÑáéíóúüñ][.)]|[•◦▪▫*–—-])\s+/u;
+const INLINE_LIST_BOUNDARY = /([:;.!?…])\s+(?=(?:\(?\d{1,3}(?:[.)])?|[A-Za-zÁÉÍÓÚÜÑáéíóúüñ][.)]|[•◦▪▫*–—-])\s+)/gu;
+const sentenceSegmenter = typeof Intl !== "undefined" && Intl.Segmenter
+  ? new Intl.Segmenter("es", { granularity: "sentence" })
+  : null;
+
+function splitProse(line) {
+  if (sentenceSegmenter) {
+    return [...sentenceSegmenter.segment(line)]
+      .map(({ segment }) => segment.trim())
+      .filter(Boolean);
+  }
+  return (line.match(/.+?(?:[.!?…]+(?=\s|$)|$)/gu) || [line])
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
 function splitSentences(text) {
-  const normalized = text.trim().replace(/\r\n/g, "\n");
-  const chunks = normalized.match(/[^.!?…\n]+(?:[.!?…]+|(?=\n|$))/g) || [normalized];
-  return chunks.map((part) => part.trim()).filter(Boolean);
+  const normalized = text
+    .replace(/\r\n?|[\u2028\u2029]/g, "\n")
+    .replace(/\u00a0/g, " ")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n[ \t]+/g, "\n")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+  if (!normalized) return [];
+
+  // Google Docs puede pegar un encabezado y su lista en la misma línea:
+  // «Tiene cinco partes: 1 ...». Convertimos cada número o viñeta en una frase.
+  return normalized
+    .replace(INLINE_LIST_BOUNDARY, "$1\n")
+    .split(/\n+/)
+    .flatMap((rawLine) => {
+      const line = rawLine.trim();
+      if (!line) return [];
+      if (LIST_ITEM_PREFIX.test(line) || /[:;]$/.test(line)) return [line];
+      return splitProse(line);
+    });
 }
 
 function showScreen(name) {
@@ -231,6 +266,25 @@ function begin() {
   startPart();
 }
 
+function goToPart(index) {
+  state.playIndex = index;
+  startPart();
+}
+
+function renderFinishParts() {
+  const multi = state.playlist.length > 1;
+  els.finishParts.hidden = !multi;
+  if (!multi) return;
+  els.finishPartsList.replaceChildren();
+  state.playlist.forEach((part, index) => {
+    const btn = document.createElement("button");
+    btn.className = `finish-part pc-${index % PART_COLORS}${index === state.playIndex ? " current" : ""}`;
+    btn.append(makeSpan("part-label", `Parte ${index + 1}`), makeSpan("part-snippet", snippet(part, 70)));
+    btn.addEventListener("click", () => goToPart(index));
+    els.finishPartsList.append(btn);
+  });
+}
+
 function startPart() {
   state.text = state.playlist[state.playIndex];
   state.sentences = splitSentences(state.text);
@@ -292,8 +346,11 @@ els.show.addEventListener("click", () => {
     els.nextPart.hidden = !hasNext;
     els.finishTitle.textContent = hasNext ? `Parte ${state.playIndex + 1} completada` : "Ya es tuyo.";
     els.finishText.textContent = hasNext
-      ? "Esta parte ya está en tu cabeza. Sigue con la siguiente."
-      : "Has leído, reconstruido y recordado el texto completo.";
+      ? "Esta parte ya está en tu cabeza. Sigue con la siguiente o salta a la que quieras."
+      : state.playlist.length > 1
+        ? "Has completado todas las partes. Puedes repasar cualquiera cuando quieras."
+        : "Has leído, reconstruido y recordado el texto completo.";
+    renderFinishParts();
     window.scrollTo({ top: 0 });
     showScreen("finish");
   } else {
