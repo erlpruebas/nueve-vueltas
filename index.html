@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#fff7ea" />
     <title>Nueve vueltas</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=20261014" />
   </head>
   <body>
     <main id="app" class="app-shell">
@@ -39,8 +39,12 @@
         </div>
         <div class="setup-footer">
           <span id="text-hint">Mínimo una frase</span>
-          <button id="start-btn" class="button primary">Empezar <span aria-hidden="true">→</span></button>
+          <div class="project-actions">
+            <button id="share-btn" class="button secondary">Compartir proyecto</button>
+            <button id="start-btn" class="button primary">Empezar <span aria-hidden="true">→</span></button>
+          </div>
         </div>
+        <p id="project-feedback" class="project-feedback" role="alert" hidden></p>
         <div id="history-panel" class="history-panel" hidden>
           <div class="panel-head">
             <span class="panel-title">Histórico</span>
@@ -48,6 +52,17 @@
           </div>
           <ul id="history-list" class="history-list"></ul>
         </div>
+      </section>
+
+      <section id="picker" class="part-picker screen" aria-labelledby="picker-title">
+        <div class="panel-head">
+          <button id="picker-back-btn" class="link-button">← Volver al texto</button>
+          <button id="picker-share-btn" class="button secondary small">Compartir proyecto</button>
+        </div>
+        <p class="eyebrow">Tú eliges por dónde empezar</p>
+        <h2 id="picker-title" tabindex="-1">Elige una parte</h2>
+        <p class="intro">Selecciona la parte que quieres practicar. Puedes volver a esta lista en cualquier momento.</p>
+        <div id="picker-list" class="finish-parts-list picker-list"></div>
       </section>
 
       <section id="game" class="game screen" aria-live="polite">
@@ -61,6 +76,10 @@
           </div>
         </header>
 
+        <div class="game-project-actions">
+          <button id="view-parts-btn" class="button secondary small" hidden>← Ver partes</button>
+          <button id="game-share-btn" class="button secondary small">Compartir proyecto</button>
+        </div>
         <nav id="level-nav" class="level-nav" aria-label="Niveles"></nav>
 
         <div class="stage-heading">
@@ -99,12 +118,28 @@
         <div class="finish-actions">
           <button id="next-part-btn" class="button primary" hidden>Siguiente parte →</button>
           <button id="again-btn" class="button secondary">Repetir texto</button>
+          <button id="finish-share-btn" class="button secondary">Compartir proyecto</button>
           <button id="new-btn" class="button primary">Nuevo texto</button>
         </div>
       </section>
     </main>
 
+    <dialog id="share-dialog" class="share-dialog" aria-labelledby="share-title">
+      <div class="panel-head">
+        <h2 id="share-title">Compartir proyecto</h2>
+        <button id="share-close-btn" class="icon-button" aria-label="Cerrar">×</button>
+      </div>
+      <p>Copia este enlace y envíalo por WhatsApp o donde quieras. Al abrirlo, tu amigo tendrá el texto y las partes preparados para practicar.</p>
+      <label for="share-link">Enlace del proyecto</label>
+      <textarea id="share-link" rows="3" readonly spellcheck="false"></textarea>
+      <p id="share-status" class="share-status" role="status"></p>
+      <div class="project-actions">
+        <button id="share-copy-btn" class="button primary" disabled>Copiar enlace</button>
+        <button id="share-native-btn" class="button secondary" hidden>Compartir…</button>
+      </div>
+    </dialog>
     <div id="toast" class="toast" role="status"></div>
-    <script src="app.js"></script>
+    <script src="project-links.js?v=20261014"></script>
+    <script src="app.js?v=20261014"></script>
   </body>
 </html>

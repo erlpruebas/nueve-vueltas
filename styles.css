@@ -45,7 +45,7 @@ button { -webkit-tap-highlight-color: transparent; }
 .screen { display: none; }
 .screen.active { display: flex; animation: enter .35s ease both; }
 
-.setup, .finish {
+.setup, .finish, .part-picker {
   min-height: calc(100vh - 46px);
   padding: clamp(34px, 7vw, 70px);
   flex-direction: column;
@@ -88,6 +88,30 @@ textarea {
 textarea:focus { border-color: var(--pink); box-shadow: 0 0 0 4px rgba(255, 79, 139, .10); }
 .setup-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 16px; }
 #text-hint { color: var(--muted); font: 400 11px "DM Mono", monospace; }
+.project-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.game-project-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+.game-project-actions #view-parts-btn { margin-right: auto; }
+.part-picker .panel-head { gap: 16px; margin-bottom: 36px; }
+.picker-list { width: 100%; }
+.picker-list .finish-part { min-height: 64px; }
+.part-picker .picker-list .part-snippet { white-space: normal; overflow-wrap: anywhere; }
+#picker-title:focus { outline: none; }
+.project-feedback { color: var(--pink-dark); font-size: 13px; line-height: 1.6; }
+.share-dialog {
+  width: min(560px, calc(100% - 32px)); max-height: calc(100vh - 32px); padding: 26px;
+  color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 20px;
+  box-shadow: var(--shadow); color-scheme: dark;
+}
+.share-dialog::backdrop { background: rgba(0, 0, 0, .7); }
+.share-dialog h2 { font-size: clamp(24px, 5vw, 32px); }
+.share-dialog .panel-head { gap: 16px; }
+.share-dialog .icon-button { flex: none; }
+.share-dialog p { color: var(--muted); font-size: 13px; line-height: 1.6; }
+.share-dialog label { display: block; }
+.share-dialog textarea { font: 12px/1.5 "DM Mono", monospace; overflow-wrap: anywhere; }
+.share-status { min-height: 2.5em; }
+.share-dialog .project-actions { margin-top: 16px; }
+button:focus-visible { outline: 2px solid var(--lime); outline-offset: 4px; }
 
 .editor-row { display: flex; gap: 14px; align-items: stretch; }
 .highlight-wrap { position: relative; flex: 1; min-width: 0; display: flex; }
@@ -249,10 +273,10 @@ textarea:focus { border-color: var(--pink); box-shadow: 0 0 0 4px rgba(255, 79, 
 .finish-part.pc-3 { border-left-color: #fb923c; } .finish-part.pc-3 .part-label { color: #fb923c; }
 .finish-part.pc-4 { border-left-color: #c084fc; } .finish-part.pc-4 .part-label { color: #c084fc; }
 .finish-part:hover { border-color: var(--pink); }
-.finish-actions { display: flex; gap: 12px; margin-top: 20px; }
+.finish-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
 .toast {
   position: fixed; left: 50%; bottom: 28px; z-index: 5; transform: translate(-50%, 20px); opacity: 0;
-  padding: 10px 16px; color: white; background: var(--ink); border-radius: 10px; pointer-events: none;
+  padding: 10px 16px; color: var(--cream); background: var(--ink); border-radius: 10px; pointer-events: none;
   font: 500 11px "DM Mono", monospace; transition: .25s;
 }
 .toast.show { transform: translate(-50%, 0); opacity: 1; }
@@ -262,8 +286,13 @@ textarea:focus { border-color: var(--pink); box-shadow: 0 0 0 4px rgba(255, 79, 
 
 @media (max-width: 560px) {
   .app-shell { width: 100%; min-height: 100vh; margin: 0; border: 0; border-radius: 0; }
-  .setup, .finish, .game { min-height: 100vh; }
-  .setup { padding: 30px 22px; }
+  .setup, .finish, .game, .part-picker { min-height: 100vh; }
+  .setup, .part-picker { padding: 30px 22px; }
+  .setup-footer { align-items: stretch; flex-direction: column; }
+  .setup-footer .project-actions { flex-direction: column; }
+  .part-picker .panel-head { align-items: flex-start; }
+  .picker-list .finish-part { flex-wrap: wrap; }
+  .picker-list .part-snippet { flex-basis: 65%; }
   .mini-brand span { display: none; }
   .level-tab { font-size: 9px; }
   .reading-controls { flex-direction: column; align-items: stretch; }
