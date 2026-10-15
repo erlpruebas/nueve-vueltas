@@ -68,6 +68,15 @@ test('unir partes conserva su contenido y los límites restantes', () => {
   assert.deepEqual(parts(text, P.mergePart(ranges, 2)), ['Uno.', 'Dos. Tres.']);
 });
 
+test('añadir un corte dentro de una parte y eliminarlo recupera las mismas partes', () => {
+  const text = 'Uno dos tres. Cuatro cinco seis. Siete ocho.';
+  const original = P.splitAt(text, [], [14, 32]);
+  const divided = P.splitAt(text, original, [4]);
+  assert.equal(divided.length, original.length + 1);
+  assert.deepEqual(parts(text, divided), ['Uno', 'dos tres.', 'Cuatro cinco seis.', 'Siete ocho.']);
+  assert.deepEqual(P.mergePart(divided, 0), original);
+});
+
 test('reconstruye los proyectos antiguos y los textos repetidos en orden', () => {
   const text = '  Eco.\n\n\nEco.\n\n\nFinal.  ';
   const saved = ['Eco.', 'Eco.', 'Final.'];

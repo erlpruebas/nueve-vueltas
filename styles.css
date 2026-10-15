@@ -146,6 +146,8 @@ button:focus-visible { outline: 2px solid var(--lime); outline-offset: 4px; }
 .boundary-panel { margin-top: 18px; padding: 16px; border: 1px solid var(--line); border-radius: 15px; }
 .boundary-panel summary { color: var(--pink-dark); cursor: pointer; font-size: 14px; font-weight: 800; }
 .boundary-panel > p { color: var(--muted); font-size: 12px; line-height: 1.6; }
+.boundary-tools { display: flex; flex-wrap: wrap; gap: 12px; margin-block: 16px; }
+.cut-caret { display: inline-block; width: 0; height: 1.4em; border-left: 3px solid var(--pink); vertical-align: middle; }
 .boundary-editor {
   max-height: 350px; overflow-y: auto; padding: 16px; border: 1px solid var(--line); border-radius: 12px;
   white-space: pre-wrap; overflow-wrap: anywhere; line-height: 2.3; overscroll-behavior: contain;

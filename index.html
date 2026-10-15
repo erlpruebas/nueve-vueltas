@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#fff7ea" />
     <title>Nueve vueltas</title>
-    <link rel="stylesheet" href="styles.css?v=20261015" />
+    <link rel="stylesheet" href="styles.css?v=20261015-2" />
   </head>
   <body>
     <main id="app" class="app-shell">
@@ -43,8 +43,13 @@
         </div>
         <details id="boundary-panel" class="boundary-panel" open hidden>
           <summary>Ajustar límites de las partes</summary>
-          <p>Arrastra los marcadores ↔ para pasar palabras de una parte a otra. También puedes tocar un marcador y después el punto del texto donde quieras dejarlo, o usar las flechas del teclado.</p>
-          <div id="boundary-editor" class="boundary-editor" aria-label="Texto con límites ajustables"></div>
+          <p>Toca un punto del texto y pulsa «Añadir corte» para dividir una parte en dos. Selecciona un marcador ↔ y pulsa «Eliminar corte» para unir las dos partes vecinas. El texto se conserva completo.</p>
+          <div class="boundary-tools">
+            <button id="add-cut-btn" class="button secondary small" disabled>Añadir corte</button>
+            <button id="remove-cut-btn" class="button secondary small" disabled>Eliminar corte</button>
+          </div>
+          <p>También puedes arrastrar los marcadores, moverlos con las flechas del teclado, o tocar un marcador y después su nueva posición. Toca de nuevo el marcador para deseleccionarlo.</p>
+          <div id="boundary-editor" class="boundary-editor" tabindex="0" aria-label="Texto con límites ajustables"></div>
           <p id="boundary-status" class="split-hint" role="status" aria-live="polite"></p>
         </details>
         <div class="setup-footer">
@@ -149,8 +154,8 @@
       </div>
     </dialog>
     <div id="toast" class="toast" role="status"></div>
-    <script src="project-links.js?v=20261015"></script>
-    <script src="text-parts.js?v=20261015"></script>
-    <script src="app.js?v=20261015"></script>
+    <script src="project-links.js?v=20261015-2"></script>
+    <script src="text-parts.js?v=20261015-2"></script>
+    <script src="app.js?v=20261015-2"></script>
   </body>
 </html>

@@ -29,7 +29,10 @@ En cada nivel vas mostrando las frases una a una para comprobar si las recuerdas
   **Marcar hasta aquí**; la siguiente empieza ahí y el resto queda incluido.
   También puedes seleccionar un fragmento y pulsar **Usar selección completa**.
   En **Ajustar límites de las partes**, arrastra los marcadores ↔ entre palabras
-  para ampliar o reducir cada parte. Puedes tocar un marcador y después su nueva
+  para ampliar o reducir cada parte. Toca un punto del texto y pulsa **Añadir corte**
+  para dividir esa parte en dos; selecciona un marcador y pulsa **Eliminar corte**
+  para unir las dos partes vecinas. También puedes usar Supr con el marcador enfocado.
+  Puedes tocar un marcador y después su nueva
   posición en el texto, o usar las flechas del teclado. **Deshacer** revierte el
   último ajuste; el botón × une una parte con su vecina sin borrar texto.
   Antes de empezar, al cargar un proyecto del histórico o al abrir uno compartido,

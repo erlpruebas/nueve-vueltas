@@ -16,6 +16,7 @@ const state = {
   partsSource: "",
   partsUndo: [],
   selectedBoundary: null,
+  pendingCut: null,
 };
 
 const stages = [
@@ -38,6 +39,7 @@ const els = {
   autoSplit: $("#auto-split-btn"), markEnd: $("#mark-end-btn"), undoParts: $("#undo-parts-btn"),
   splitPart: $("#split-part-btn"), splitHint: $("#split-hint"),
   boundaryPanel: $("#boundary-panel"), boundaryEditor: $("#boundary-editor"), boundaryStatus: $("#boundary-status"),
+  addCut: $("#add-cut-btn"), removeCut: $("#remove-cut-btn"),
   partsPanel: $("#parts-panel"), partsList: $("#parts-list"), clearParts: $("#clear-parts-btn"),
   historyPanel: $("#history-panel"), historyList: $("#history-list"), clearHistory: $("#clear-history-btn"),
   nextPart: $("#next-part-btn"), finishTitle: $("#finish-title"), finishText: $("#finish-text"),
@@ -336,6 +338,7 @@ els.input.addEventListener("input", () => {
     state.partsSource = els.input.value;
     state.partsUndo = [];
     state.selectedBoundary = null;
+    state.pendingCut = null;
   }
   renderParts();
 });
@@ -417,6 +420,7 @@ els.fresh.addEventListener("click", () => {
   state.partsSource = "";
   state.partsUndo = [];
   state.selectedBoundary = null;
+  state.pendingCut = null;
   renderParts();
   resetMarks();
   showScreen("setup");
@@ -538,6 +542,7 @@ function setPartRanges(ranges) {
   state.partsSource = els.input.value;
   state.parts = TextParts.partsFromRanges(els.input.value, ranges);
   state.selectedBoundary = null;
+  state.pendingCut = null;
   renderParts();
 }
 
@@ -547,20 +552,40 @@ els.undoParts.addEventListener("click", () => {
   state.partRanges = previous.ranges;
   state.parts = previous.parts;
   state.selectedBoundary = null;
+  state.pendingCut = null;
   renderParts();
 });
 
+function syncBoundaryControls() {
+  els.addCut.disabled = state.pendingCut === null;
+  els.removeCut.disabled = state.selectedBoundary === null;
+}
+
 function renderBoundaryEditor(ranges = state.partRanges) {
-  els.boundaryPanel.hidden = ranges.length < 2 || !ranges.every(Boolean);
+  syncBoundaryControls();
+  els.boundaryPanel.hidden = ranges.length === 0 || !ranges.every(Boolean);
   if (els.boundaryPanel.hidden) { els.boundaryEditor.replaceChildren(); return; }
   const text = els.input.value;
   const fragment = document.createDocumentFragment();
   let position = 0;
-  function appendText(start, end, color) {
+  function appendSegment(start, end, color) {
     if (end <= start) return;
     const span = makeSpan(`boundary-text${color === undefined ? "" : ` hl-${color % PART_COLORS}`}`, text.slice(start, end));
     span.dataset.sourceStart = start;
     fragment.append(span);
+  }
+  function appendText(start, end, color) {
+    if (end <= start) return;
+    if (state.pendingCut !== null && state.pendingCut > start && state.pendingCut < end) {
+      const cut = state.pendingCut;
+      appendSegment(start, cut, color);
+      const cursor = makeSpan("cut-caret");
+      cursor.setAttribute("aria-hidden", "true");
+      fragment.append(cursor);
+      appendSegment(cut, end, color);
+      return;
+    }
+    appendSegment(start, end, color);
   }
   ranges.forEach((range, index) => {
     appendText(position, range.start);
@@ -577,7 +602,7 @@ function renderBoundaryEditor(ranges = state.partRanges) {
     marker.setAttribute("aria-valuemax", ranges[index + 1].end - 1);
     marker.setAttribute("aria-valuenow", range.end);
     marker.setAttribute("aria-valuetext", `Parte ${index + 1}: ${snippet(text.slice(range.start, range.end), 55)}`);
-    marker.title = `Arrastra para ajustar las partes ${index + 1} y ${index + 2}`;
+    marker.title = `Arrastra para ajustar las partes ${index + 1} y ${index + 2}, o selecciónalo para eliminar el corte`;
     fragment.append(marker);
   });
   appendText(position, text.length);
@@ -628,8 +653,11 @@ els.boundaryEditor.addEventListener("pointerdown", (event) => {
   if (!marker || boundaryDrag || (event.pointerType === "mouse" && event.button !== 0)) return;
   event.preventDefault();
   const index = Number(marker.dataset.boundary);
+  const wasSelected = state.selectedBoundary === index;
   state.selectedBoundary = index;
-  boundaryDrag = { index, pointerId: event.pointerId, x: event.clientX, y: event.clientY, startX: event.clientX, startY: event.clientY, moved: false, draft: state.partRanges };
+  state.pendingCut = null;
+  syncBoundaryControls();
+  boundaryDrag = { index, wasSelected, pointerId: event.pointerId, x: event.clientX, y: event.clientY, startX: event.clientX, startY: event.clientY, moved: false, draft: state.partRanges };
   els.boundaryEditor.setPointerCapture(event.pointerId);
   document.body.classList.add("moving-boundary");
   els.boundaryStatus.textContent = `Límite ${index + 1} seleccionado. Arrástralo o toca el punto del texto donde quieras dejarlo.`;
@@ -654,23 +682,65 @@ function finishBoundaryDrag(event) {
   if (drag.moved) {
     setPartRanges(drag.draft);
     els.boundaryStatus.textContent = "Límite ajustado. El texto completo se conserva entre las dos partes.";
-  } else renderBoundaryEditor();
+  } else {
+    state.selectedBoundary = drag.wasSelected ? null : drag.index;
+    renderBoundaryEditor();
+    if (state.selectedBoundary === null) els.boundaryStatus.textContent = "Marcador deseleccionado. Puedes tocar el texto para añadir un corte.";
+  }
   els.boundaryEditor.querySelector(`[data-boundary="${drag.index}"]`)?.focus({ preventScroll: true });
 }
 
 ["pointerup", "pointercancel", "lostpointercapture"].forEach((type) => els.boundaryEditor.addEventListener(type, finishBoundaryDrag));
 els.boundaryEditor.addEventListener("click", (event) => {
-  if (state.selectedBoundary === null || event.target.closest(".boundary-handle")) return;
+  if (event.target.closest(".boundary-handle")) return;
   const offset = sourceOffsetAtPoint(event.clientX, event.clientY);
   if (offset === null) return;
-  setPartRanges(TextParts.moveBoundary(els.input.value, state.partRanges, state.selectedBoundary, offset));
-  els.boundaryStatus.textContent = "Límite ajustado.";
+  if (state.selectedBoundary !== null) {
+    setPartRanges(TextParts.moveBoundary(els.input.value, state.partRanges, state.selectedBoundary, offset));
+    els.boundaryStatus.textContent = "Límite ajustado.";
+    return;
+  }
+  const range = state.partRanges.find((range) => range && offset > range.start && offset < range.end);
+  if (!range) return;
+  const stops = TextParts.boundaryStops(els.input.value, [{ start: range.start, end: offset }, { start: offset, end: range.end }], 0);
+  if (!stops.length) return;
+  state.pendingCut = stops.reduce((best, stop) => Math.abs(stop - offset) < Math.abs(best - offset) ? stop : best);
+  renderBoundaryEditor();
+  els.boundaryStatus.textContent = "Punto marcado. Pulsa «Añadir corte» para dividir esta parte en dos.";
 });
 
+els.addCut.addEventListener("click", () => {
+  if (state.pendingCut === null) return;
+  setPartRanges(TextParts.splitAt(els.input.value, state.partRanges, [state.pendingCut]));
+  els.boundaryStatus.textContent = "Corte añadido. La parte se ha dividido en dos.";
+});
+
+function removeSelectedCut() {
+  if (state.selectedBoundary === null) return;
+  setPartRanges(TextParts.mergePart(state.partRanges, state.selectedBoundary));
+  els.boundaryStatus.textContent = "Corte eliminado. Las dos partes se han unido sin borrar texto.";
+  els.boundaryEditor.focus({ preventScroll: true });
+}
+
+els.removeCut.addEventListener("click", removeSelectedCut);
+
 els.boundaryEditor.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    state.selectedBoundary = null;
+    state.pendingCut = null;
+    renderBoundaryEditor();
+    els.boundaryEditor.focus({ preventScroll: true });
+    els.boundaryStatus.textContent = "Selección cancelada.";
+    return;
+  }
   const marker = event.target.closest(".boundary-handle");
   if (!marker) return;
-  if (event.key === "Escape") { state.selectedBoundary = null; renderBoundaryEditor(); return; }
+  if (["Delete", "Backspace"].includes(event.key)) {
+    event.preventDefault();
+    state.selectedBoundary = Number(marker.dataset.boundary);
+    removeSelectedCut();
+    return;
+  }
   if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
   event.preventDefault();
   const index = Number(marker.dataset.boundary);
@@ -757,6 +827,7 @@ function loadProject(project) {
   state.parts = Array.isArray(project.parts) ? [...project.parts] : [];
   state.partsUndo = [];
   state.selectedBoundary = null;
+  state.pendingCut = null;
   recomputePartRanges();
   state.splitMode = false;
   els.splitControls.hidden = true;
