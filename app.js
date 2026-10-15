@@ -12,9 +12,10 @@ const state = {
   playlist: [],
   playIndex: 0,
   splitMode: false,
-  markStart: null,
-  markEnd: null,
   partRanges: [],
+  partsSource: "",
+  partsUndo: [],
+  selectedBoundary: null,
 };
 
 const stages = [
@@ -34,8 +35,9 @@ const els = {
   hide: $("#hide-btn"), show: $("#show-btn"), exit: $("#exit-btn"), sound: $("#sound-btn"),
   again: $("#again-btn"), fresh: $("#new-btn"), toast: $("#toast"),
   splitMode: $("#split-mode-btn"), splitControls: $("#split-controls"),
-  markStart: $("#mark-start-btn"), markEnd: $("#mark-end-btn"),
+  autoSplit: $("#auto-split-btn"), markEnd: $("#mark-end-btn"), undoParts: $("#undo-parts-btn"),
   splitPart: $("#split-part-btn"), splitHint: $("#split-hint"),
+  boundaryPanel: $("#boundary-panel"), boundaryEditor: $("#boundary-editor"), boundaryStatus: $("#boundary-status"),
   partsPanel: $("#parts-panel"), partsList: $("#parts-list"), clearParts: $("#clear-parts-btn"),
   historyPanel: $("#history-panel"), historyList: $("#history-list"), clearHistory: $("#clear-history-btn"),
   nextPart: $("#next-part-btn"), finishTitle: $("#finish-title"), finishText: $("#finish-text"),
@@ -326,8 +328,16 @@ els.input.addEventListener("input", () => {
   els.projectFeedback.hidden = true;
   const count = splitSentences(els.input.value).length;
   els.hint.textContent = els.input.value.trim() ? `${count} ${count === 1 ? "frase detectada" : "frases detectadas"}` : "Mínimo una frase";
-  recomputePartRanges();
-  renderHighlights();
+  if (state.partsSource !== els.input.value) {
+    if (state.partRanges.every(Boolean)) {
+      state.partRanges = TextParts.rebaseRanges(state.partsSource, els.input.value, state.partRanges);
+      state.parts = TextParts.partsFromRanges(els.input.value, state.partRanges);
+    } else recomputePartRanges();
+    state.partsSource = els.input.value;
+    state.partsUndo = [];
+    state.selectedBoundary = null;
+  }
+  renderParts();
 });
 els.input.addEventListener("scroll", () => {
   els.backdrop.scrollTop = els.input.scrollTop;
@@ -403,6 +413,10 @@ els.fresh.addEventListener("click", () => {
   els.input.value = "";
   els.hint.textContent = "Mínimo una frase";
   state.parts = [];
+  state.partRanges = [];
+  state.partsSource = "";
+  state.partsUndo = [];
+  state.selectedBoundary = null;
   renderParts();
   resetMarks();
   showScreen("setup");
@@ -415,14 +429,8 @@ function snippet(text, max = 60) {
 }
 
 function recomputePartRanges() {
-  const text = els.input.value;
-  let from = 0;
-  state.partRanges = state.parts.map((part) => {
-    const idx = text.indexOf(part, from);
-    if (idx === -1) return null;
-    from = idx + part.length;
-    return { start: idx, end: idx + part.length };
-  });
+  state.partRanges = TextParts.rangesFromParts(els.input.value, state.parts);
+  state.partsSource = els.input.value;
 }
 
 function renderHighlights() {
@@ -444,11 +452,12 @@ function renderHighlights() {
 }
 
 function renderParts() {
-  els.partsPanel.hidden = state.parts.length === 0;
+  els.partsPanel.hidden = state.parts.length === 0 && state.partsUndo.length === 0;
+  els.clearParts.disabled = state.parts.length === 0;
   els.start.innerHTML = state.parts.length
     ? 'Elegir parte <span aria-hidden="true">→</span>'
     : 'Empezar <span aria-hidden="true">→</span>';
-  recomputePartRanges();
+  els.undoParts.disabled = state.partsUndo.length === 0;
   renderHighlights();
   els.partsList.replaceChildren();
   state.parts.forEach((part, index) => {
@@ -457,40 +466,24 @@ function renderParts() {
     const remove = document.createElement("button");
     remove.className = "part-delete";
     remove.textContent = "×";
-    remove.setAttribute("aria-label", `Borrar parte ${index + 1}`);
+    const action = state.parts.length === 1 ? "Quitar división" : `Unir parte ${index + 1} con la ${index < state.parts.length - 1 ? "siguiente" : "anterior"}`;
+    remove.setAttribute("aria-label", action);
+    remove.title = action;
     remove.addEventListener("click", () => {
-      state.parts.splice(index, 1);
-      renderParts();
+      if (!canAdjustParts()) return;
+      setPartRanges(TextParts.mergePart(state.partRanges, index));
       beep(210, .05);
     });
     item.append(makeSpan("part-label", `Parte ${index + 1}`), makeSpan("part-snippet", snippet(part, 90)), remove);
     els.partsList.append(item);
   });
+  renderBoundaryEditor();
+  resetMarks();
 }
 
 function resetMarks() {
-  state.markStart = null;
-  state.markEnd = null;
-  els.markEnd.disabled = true;
-  els.splitPart.hidden = true;
-  els.splitHint.textContent = "Coloca el cursor donde empieza la parte (o selecciona el trozo entero) y pulsa «Marcar inicio».";
-}
-
-function updateSplitPreview() {
-  if (state.markStart === null) return;
-  if (state.markEnd === null || state.markEnd <= state.markStart) {
-    els.splitPart.hidden = true;
-    els.splitHint.textContent = "Inicio marcado. Coloca el cursor donde termina y pulsa «Marcar final».";
-    return;
-  }
-  const fragment = els.input.value.slice(state.markStart, state.markEnd).trim();
-  if (!fragment) {
-    els.splitPart.hidden = true;
-    els.splitHint.textContent = "El trozo marcado está vacío. Vuelve a marcar.";
-    return;
-  }
-  els.splitPart.hidden = false;
-  els.splitHint.textContent = `Parte ${state.parts.length + 1}: «${snippet(fragment, 46)}»`;
+  els.splitPart.disabled = els.input.selectionEnd <= els.input.selectionStart;
+  els.splitHint.textContent = "Coloca el cursor al final de una parte y pulsa «Marcar hasta aquí». La siguiente comienza ahí; el resto del texto queda incluido.";
 }
 
 els.splitMode.addEventListener("click", () => {
@@ -501,35 +494,195 @@ els.splitMode.addEventListener("click", () => {
   beep(state.splitMode ? 500 : 300, .05);
 });
 
-els.markStart.addEventListener("click", () => {
-  state.markStart = els.input.selectionStart ?? 0;
-  state.markEnd = els.input.selectionEnd > state.markStart ? els.input.selectionEnd : null;
-  els.markEnd.disabled = false;
-  updateSplitPreview();
-  beep(430, .05);
-});
-
 els.markEnd.addEventListener("click", () => {
-  state.markEnd = els.input.selectionEnd ?? els.input.value.length;
-  updateSplitPreview();
+  const offset = els.input.selectionEnd;
+  if (!els.input.value.slice(0, offset).trim()) { toast("Coloca el cursor después del texto de la primera parte"); return; }
+  if (!canAdjustParts()) return;
+  setPartRanges(TextParts.splitAt(els.input.value, state.partRanges, [offset]));
+  toast(`${state.parts.length} ${state.parts.length === 1 ? "parte preparada" : "partes preparadas"}`);
   beep(470, .05);
 });
 
 els.splitPart.addEventListener("click", () => {
-  const fragment = els.input.value.slice(state.markStart, state.markEnd).trim();
-  if (!fragment) return;
-  state.parts.push(fragment);
-  renderParts();
-  resetMarks();
-  toast(`Parte ${state.parts.length} creada`);
+  const { selectionStart: start, selectionEnd: end, value: text } = els.input;
+  if (start === end || !text.slice(start, end).trim() || !canAdjustParts()) return;
+  setPartRanges(TextParts.selectRange(text, state.partRanges, start, end));
+  toast("Selección preparada como una parte completa");
   beep(560, .07);
 });
 
 els.clearParts.addEventListener("click", () => {
-  state.parts = [];
-  renderParts();
-  resetMarks();
+  setPartRanges([]);
   beep(210, .05);
+});
+
+els.autoSplit.addEventListener("click", () => {
+  const text = els.input.value;
+  if (!text.trim()) { toast("Pega primero el texto que quieres dividir"); els.input.focus(); return; }
+  setPartRanges(TextParts.autoRanges(text));
+  toast(state.parts.length > 1 ? `${state.parts.length} partes creadas automáticamente` : "Una parte: no hay dos líneas en blanco entre bloques");
+});
+
+["select", "keyup", "pointerup"].forEach((type) => els.input.addEventListener(type, resetMarks));
+
+function canAdjustParts() {
+  if (state.partRanges.every(Boolean)) return true;
+  toast("Vuelve a dividir este texto automáticamente para ajustar sus límites");
+  return false;
+}
+
+function setPartRanges(ranges) {
+  state.partsUndo.push({ ranges: state.partRanges.map((range) => range && { ...range }), parts: [...state.parts] });
+  if (state.partsUndo.length > 20) state.partsUndo.shift();
+  state.partRanges = ranges;
+  state.partsSource = els.input.value;
+  state.parts = TextParts.partsFromRanges(els.input.value, ranges);
+  state.selectedBoundary = null;
+  renderParts();
+}
+
+els.undoParts.addEventListener("click", () => {
+  const previous = state.partsUndo.pop();
+  if (!previous) return;
+  state.partRanges = previous.ranges;
+  state.parts = previous.parts;
+  state.selectedBoundary = null;
+  renderParts();
+});
+
+function renderBoundaryEditor(ranges = state.partRanges) {
+  els.boundaryPanel.hidden = ranges.length < 2 || !ranges.every(Boolean);
+  if (els.boundaryPanel.hidden) { els.boundaryEditor.replaceChildren(); return; }
+  const text = els.input.value;
+  const fragment = document.createDocumentFragment();
+  let position = 0;
+  function appendText(start, end, color) {
+    if (end <= start) return;
+    const span = makeSpan(`boundary-text${color === undefined ? "" : ` hl-${color % PART_COLORS}`}`, text.slice(start, end));
+    span.dataset.sourceStart = start;
+    fragment.append(span);
+  }
+  ranges.forEach((range, index) => {
+    appendText(position, range.start);
+    appendText(range.start, range.end, index);
+    position = range.end;
+    if (index === ranges.length - 1) return;
+    const marker = document.createElement("button");
+    marker.className = `boundary-handle${state.selectedBoundary === index ? " selected" : ""}`;
+    marker.textContent = "↔";
+    marker.dataset.boundary = index;
+    marker.setAttribute("role", "slider");
+    marker.setAttribute("aria-label", `Límite entre partes ${index + 1} y ${index + 2}`);
+    marker.setAttribute("aria-valuemin", range.start + 1);
+    marker.setAttribute("aria-valuemax", ranges[index + 1].end - 1);
+    marker.setAttribute("aria-valuenow", range.end);
+    marker.setAttribute("aria-valuetext", `Parte ${index + 1}: ${snippet(text.slice(range.start, range.end), 55)}`);
+    marker.title = `Arrastra para ajustar las partes ${index + 1} y ${index + 2}`;
+    fragment.append(marker);
+  });
+  appendText(position, text.length);
+  const scroll = els.boundaryEditor.scrollTop;
+  els.boundaryEditor.replaceChildren(fragment);
+  els.boundaryEditor.scrollTop = scroll;
+}
+
+function sourceOffsetAtPoint(x, y) {
+  let node, offset;
+  if (document.caretPositionFromPoint) {
+    const caret = document.caretPositionFromPoint(x, y);
+    if (caret) { node = caret.offsetNode; offset = caret.offset; }
+  } else if (document.caretRangeFromPoint) {
+    const caret = document.caretRangeFromPoint(x, y);
+    if (caret) { node = caret.startContainer; offset = caret.startOffset; }
+  }
+  const element = node?.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+  const span = element?.closest?.(".boundary-text");
+  if (!span || !els.boundaryEditor.contains(span)) return null;
+  return Number(span.dataset.sourceStart) + (node.nodeType === Node.TEXT_NODE ? offset : offset > 0 ? span.textContent.length : 0);
+}
+
+let boundaryDrag = null;
+function updateBoundaryDrag() {
+  if (!boundaryDrag || !boundaryDrag.moved) return;
+  const box = els.boundaryEditor.getBoundingClientRect();
+  if (boundaryDrag.y < box.top + 28) els.boundaryEditor.scrollTop -= 12;
+  else if (boundaryDrag.y > box.bottom - 28) els.boundaryEditor.scrollTop += 12;
+  const offset = sourceOffsetAtPoint(boundaryDrag.x, Math.min(box.bottom - 8, Math.max(box.top + 8, boundaryDrag.y)));
+  if (offset === null) return;
+  const draft = TextParts.moveBoundary(els.input.value, state.partRanges, boundaryDrag.index, offset);
+  if (draft[boundaryDrag.index].end !== boundaryDrag.draft[boundaryDrag.index].end) {
+    boundaryDrag.draft = draft;
+    renderBoundaryEditor(draft);
+    els.boundaryStatus.textContent = `Ajustando el límite entre las partes ${boundaryDrag.index + 1} y ${boundaryDrag.index + 2}…`;
+  }
+}
+
+function dragFrame() {
+  if (!boundaryDrag) return;
+  updateBoundaryDrag();
+  boundaryDrag.frame = requestAnimationFrame(dragFrame);
+}
+
+els.boundaryEditor.addEventListener("pointerdown", (event) => {
+  const marker = event.target.closest(".boundary-handle");
+  if (!marker || boundaryDrag || (event.pointerType === "mouse" && event.button !== 0)) return;
+  event.preventDefault();
+  const index = Number(marker.dataset.boundary);
+  state.selectedBoundary = index;
+  boundaryDrag = { index, pointerId: event.pointerId, x: event.clientX, y: event.clientY, startX: event.clientX, startY: event.clientY, moved: false, draft: state.partRanges };
+  els.boundaryEditor.setPointerCapture(event.pointerId);
+  document.body.classList.add("moving-boundary");
+  els.boundaryStatus.textContent = `Límite ${index + 1} seleccionado. Arrástralo o toca el punto del texto donde quieras dejarlo.`;
+  dragFrame();
+});
+
+els.boundaryEditor.addEventListener("pointermove", (event) => {
+  if (!boundaryDrag || event.pointerId !== boundaryDrag.pointerId) return;
+  boundaryDrag.x = event.clientX;
+  boundaryDrag.y = event.clientY;
+  boundaryDrag.moved ||= Math.hypot(event.clientX - boundaryDrag.startX, event.clientY - boundaryDrag.startY) > 5;
+});
+
+function finishBoundaryDrag(event) {
+  if (!boundaryDrag || event.pointerId !== boundaryDrag.pointerId) return;
+  const drag = boundaryDrag;
+  cancelAnimationFrame(drag.frame);
+  boundaryDrag = null;
+  document.body.classList.remove("moving-boundary");
+  if (els.boundaryEditor.hasPointerCapture(event.pointerId)) els.boundaryEditor.releasePointerCapture(event.pointerId);
+  if (event.type === "pointercancel") { state.selectedBoundary = null; renderBoundaryEditor(); return; }
+  if (drag.moved) {
+    setPartRanges(drag.draft);
+    els.boundaryStatus.textContent = "Límite ajustado. El texto completo se conserva entre las dos partes.";
+  } else renderBoundaryEditor();
+  els.boundaryEditor.querySelector(`[data-boundary="${drag.index}"]`)?.focus({ preventScroll: true });
+}
+
+["pointerup", "pointercancel", "lostpointercapture"].forEach((type) => els.boundaryEditor.addEventListener(type, finishBoundaryDrag));
+els.boundaryEditor.addEventListener("click", (event) => {
+  if (state.selectedBoundary === null || event.target.closest(".boundary-handle")) return;
+  const offset = sourceOffsetAtPoint(event.clientX, event.clientY);
+  if (offset === null) return;
+  setPartRanges(TextParts.moveBoundary(els.input.value, state.partRanges, state.selectedBoundary, offset));
+  els.boundaryStatus.textContent = "Límite ajustado.";
+});
+
+els.boundaryEditor.addEventListener("keydown", (event) => {
+  const marker = event.target.closest(".boundary-handle");
+  if (!marker) return;
+  if (event.key === "Escape") { state.selectedBoundary = null; renderBoundaryEditor(); return; }
+  if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
+  event.preventDefault();
+  const index = Number(marker.dataset.boundary);
+  const stops = TextParts.boundaryStops(els.input.value, state.partRanges, index);
+  const current = state.partRanges[index].end;
+  const backwards = ["ArrowLeft", "ArrowUp"].includes(event.key);
+  const offset = event.key === "Home" ? stops[0] : event.key === "End" ? stops.at(-1)
+    : backwards ? stops.filter((stop) => stop < current).at(-1) : stops.find((stop) => stop > current);
+  if (offset === undefined) return;
+  setPartRanges(TextParts.moveBoundary(els.input.value, state.partRanges, index, offset));
+  els.boundaryEditor.querySelector(`[data-boundary="${index}"]`)?.focus({ preventScroll: true });
+  els.boundaryStatus.textContent = "Límite ajustado.";
 });
 
 const HISTORY_KEY = "nueve-vueltas-historial";
@@ -602,6 +755,9 @@ resetMarks();
 function loadProject(project) {
   els.input.value = project.text;
   state.parts = Array.isArray(project.parts) ? [...project.parts] : [];
+  state.partsUndo = [];
+  state.selectedBoundary = null;
+  recomputePartRanges();
   state.splitMode = false;
   els.splitControls.hidden = true;
   els.splitMode.classList.remove("active");

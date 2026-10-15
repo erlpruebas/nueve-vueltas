@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#fff7ea" />
     <title>Nueve vueltas</title>
-    <link rel="stylesheet" href="styles.css?v=20261014" />
+    <link rel="stylesheet" href="styles.css?v=20261015" />
   </head>
   <body>
     <main id="app" class="app-shell">
@@ -21,11 +21,12 @@
             <textarea id="source-text" rows="9" placeholder="Ejemplo: La memoria se entrena cada día. Un pequeño esfuerzo repetido llega muy lejos."></textarea>
           </div>
           <div class="split-tools">
+            <button id="auto-split-btn" class="button secondary small">Dividir automáticamente</button>
+            <p class="split-hint">Un bloque por cada dos o más líneas en blanco.</p>
             <button id="split-mode-btn" class="button secondary small">Dividir partes ✂</button>
             <div id="split-controls" class="split-controls" hidden>
-              <button id="mark-start-btn" class="button secondary small">Marcar inicio</button>
-              <button id="mark-end-btn" class="button secondary small" disabled>Marcar final</button>
-              <button id="split-part-btn" class="button primary small" hidden>Dividir parte</button>
+              <button id="mark-end-btn" class="button primary small">Marcar hasta aquí</button>
+              <button id="split-part-btn" class="button secondary small" disabled>Usar selección completa</button>
               <p id="split-hint" class="split-hint"></p>
             </div>
           </div>
@@ -33,10 +34,19 @@
         <div id="parts-panel" class="parts-panel" hidden>
           <div class="panel-head">
             <span class="panel-title">Partes</span>
-            <button id="clear-parts-btn" class="link-button">Borrar todas</button>
+            <div class="parts-actions">
+              <button id="undo-parts-btn" class="link-button" disabled>Deshacer</button>
+              <button id="clear-parts-btn" class="link-button">Borrar divisiones</button>
+            </div>
           </div>
           <ol id="parts-list" class="parts-list"></ol>
         </div>
+        <details id="boundary-panel" class="boundary-panel" open hidden>
+          <summary>Ajustar límites de las partes</summary>
+          <p>Arrastra los marcadores ↔ para pasar palabras de una parte a otra. También puedes tocar un marcador y después el punto del texto donde quieras dejarlo, o usar las flechas del teclado.</p>
+          <div id="boundary-editor" class="boundary-editor" aria-label="Texto con límites ajustables"></div>
+          <p id="boundary-status" class="split-hint" role="status" aria-live="polite"></p>
+        </details>
         <div class="setup-footer">
           <span id="text-hint">Mínimo una frase</span>
           <div class="project-actions">
@@ -139,7 +149,8 @@
       </div>
     </dialog>
     <div id="toast" class="toast" role="status"></div>
-    <script src="project-links.js?v=20261014"></script>
-    <script src="app.js?v=20261014"></script>
+    <script src="project-links.js?v=20261015"></script>
+    <script src="text-parts.js?v=20261015"></script>
+    <script src="app.js?v=20261015"></script>
   </body>
 </html>

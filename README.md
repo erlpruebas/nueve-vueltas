@@ -21,7 +21,17 @@ En cada nivel vas mostrando las frases una a una para comprobar si las recuerdas
 
 - **Histórico**: guarda automáticamente los textos que has practicado (en tu propio
   navegador, con `localStorage`; no se envía nada a ningún servidor).
-- **Dividir en partes**: para textos largos, marca inicio y final de cada trozo.
+- **Dividir en partes**: pulsa **Dividir automáticamente** para crear una parte
+  por bloque separado por **dos o más líneas en blanco** (tres o más saltos de línea,
+  también si las líneas vacías contienen espacios). Un salto simple o una sola
+  línea en blanco se mantiene dentro de la misma parte.
+  Para hacerlo a mano, coloca el cursor al final de cada parte y pulsa
+  **Marcar hasta aquí**; la siguiente empieza ahí y el resto queda incluido.
+  También puedes seleccionar un fragmento y pulsar **Usar selección completa**.
+  En **Ajustar límites de las partes**, arrastra los marcadores ↔ entre palabras
+  para ampliar o reducir cada parte. Puedes tocar un marcador y después su nueva
+  posición en el texto, o usar las flechas del teclado. **Deshacer** revierte el
+  último ajuste; el botón × une una parte con su vecina sin borrar texto.
   Antes de empezar, al cargar un proyecto del histórico o al abrir uno compartido,
   elige la parte que quieres practicar. Durante los ejercicios puedes pulsar
   **Ver partes** para elegir otra. Cada parte se resalta con un color.
@@ -52,5 +62,6 @@ el enlace completo puede abrir el proyecto. No se incluyen progreso ni preferenc
 
 ## Comprobación
 
-Con Node.js 22 o posterior, ejecuta `node --test tests/project-links.test.cjs` para
-comprobar la importación y exportación, Unicode, compresión y enlaces dañados.
+Con Node.js 22 o posterior, ejecuta `node --test tests/*.test.cjs` para comprobar
+la división y el ajuste de límites, la edición del texto, importación y exportación,
+Unicode, compresión y enlaces dañados.
